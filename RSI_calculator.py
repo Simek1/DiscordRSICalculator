@@ -1,13 +1,19 @@
 import pandas as pd
+import pandas_ta as ta
 import requests
 
 def get_data():
     url = "https://api-testnet.bybit.com/v5/market/kline"
     par = {"category": "spot",
            "symbol": "SOLUSDT",
-           "interval": 1}
+           "interval": 60}
     response = requests.get(url, params = par)
     data = response.json()
+    
+    return data
+
+def calculate_RSI(data, period = 14):
+    
     columns = ["start_time", "open_price", "high_price", "low_price", "close_price", "volume", "turnover"]
     kline_list = data["result"]["list"]
     
@@ -21,11 +27,13 @@ def get_data():
     df["volume"] = df["volume"].astype(float)
     df["turnover"] = df["turnover"].astype(float)
 
-    print(df)
+    df.set_index("start_time", inplace = True)
+    df = df.sort_index(ascending = True)
 
-    
+    RSI_df = pd.DataFrame(df["close_price"])
+    RSI = RSI_df.ta.rsi(length = period, append=True)
+    print(RSI)
 
-def calculate_RSI(data):
-    pass
+    return RSI[-1]
 
-get_data()
+print(calculate_RSI(get_data()))
