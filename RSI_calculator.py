@@ -34,6 +34,4 @@ def calculate_RSI(data, period = 14):
     RSI = RSI_df.ta.rsi(length = period, append=True)
     print(RSI)
 
-    return RSI[-1]
-
-print(calculate_RSI(get_data()))
+    return float(RSI[-1])
