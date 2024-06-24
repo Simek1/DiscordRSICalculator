@@ -4,14 +4,14 @@ import dotenv
 import os
 import websockets
 import json
+import config
 from RSI_calculator import *
 
 
-dotenv.load_dotenv()
 
 monitoring = False
 
-bot_token = os.getenv('BOT_TOKEN')
+bot_token = config.bot_token
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -26,7 +26,7 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
 
 @bot.command()
-async def monitor(ctx, period = "14"):
+async def monitor(ctx, period = config.period):
     global monitoring
     if not monitoring:
         await ctx.channel.send("RSI monitoring has been turned on")
@@ -37,7 +37,7 @@ async def monitor(ctx, period = "14"):
             async with websockets.connect("wss://stream.bybit.com/v5/public/spot") as websocket:
                 subscribe_message = {
                     "op": "subscribe",
-                    "args": ["kline.60.SOLUSDT"]
+                    "args": [f"kline.{config.interval}.SOLUSDT"]
                 }
                 await websocket.send(json.dumps(subscribe_message))
                 
@@ -45,10 +45,10 @@ async def monitor(ctx, period = "14"):
                     if not monitoring:
                         break
                     msg = json.loads(message)
-                    if "data" in msg and msg["data"][0]["interval"] == "60":
+                    if "data" in msg and msg["data"][0]["interval"] == config.interval:
                         await handle_data(msg, ctx.channel, int(period))
     else:
-        await ctx.channel.senx("RSI monitoring has been turned off")
+        await ctx.channel.send("RSI monitoring has been turned off")
         monitoring = False
 
 bot.run(bot_token)
