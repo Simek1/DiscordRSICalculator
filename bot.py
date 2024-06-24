@@ -2,13 +2,14 @@ import discord
 from discord.ext import commands
 import dotenv
 import os
-import asyncio
+import websockets
+import json
 from RSI_calculator import *
 
 
 dotenv.load_dotenv()
 
-monitoring = []
+monitoring = False
 
 bot_token = os.getenv('BOT_TOKEN')
 
@@ -25,31 +26,29 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
 
 @bot.command()
-async def monitor(ctx, timer = "60"):
-    if not timer.isnumeric():
-        ctx.send("Timer has to be a number (sec)")
+async def monitor(ctx, period = "14"):
+    global monitoring
+    if not monitoring:
+        await ctx.channel.send("RSI monitoring has been turned on")
+        monitoring = True
+        if not period.isnumeric():
+            ctx.channel.send("Period has to be a number")
+        else:
+            async with websockets.connect("wss://stream.bybit.com/v5/public/spot") as websocket:
+                subscribe_message = {
+                    "op": "subscribe",
+                    "args": ["kline.60.SOLUSDT"]
+                }
+                await websocket.send(json.dumps(subscribe_message))
+                
+                async for message in websocket:
+                    if not monitoring:
+                        break
+                    msg = json.loads(message)
+                    if "data" in msg and msg["data"][0]["interval"] == "60":
+                        await handle_data(msg, ctx.channel, int(period))
     else:
-        print(f"Monitoring command has been used on {ctx.channel.id}")
-        if ctx.channel.id in monitoring:
-            await ctx.send("RSI Monitoring has been turned off on this channel")
-            monitoring.remove(ctx.channel.id)
-        else:
-            await ctx.send("RSI Monitoring has been turned on on this channel")
-            monitoring.append(ctx.channel.id)
-            await get_RSI(ctx.channel, int(timer))
-
-async def get_RSI(channel, timer):
-    channel_id = channel.id
-    while channel_id in monitoring:
-        data = get_data()
-        RSI = calculate_RSI(data)
-
-        if RSI > 70:
-            await channel.send(f"RSI is higher than 70! Current RSI: {RSI}")
-        elif RSI < 30:
-            await channel.send(f"RSI is lower than 30! Current RSI: {RSI}")
-        else:
-            await channel.send(f"(TEST) Current RSI: {RSI}")
-        await asyncio.sleep(timer)
+        await ctx.channel.senx("RSI monitoring has been turned off")
+        monitoring = False
 
 bot.run(bot_token)

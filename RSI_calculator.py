@@ -1,37 +1,42 @@
 import pandas as pd
 import pandas_ta as ta
-import requests
 
-def get_data():
-    url = "https://api-testnet.bybit.com/v5/market/kline"
-    par = {"category": "spot",
-           "symbol": "SOLUSDT",
-           "interval": 60}
-    response = requests.get(url, params = par)
-    data = response.json()
+
+df = pd.DataFrame(columns = ["close"])
+
+async def handle_data(msg, channel, period):
+    global df
+    data = msg["data"][0]
+    timestamp = pd.to_datetime(data["timestamp"], unit="ms")
+    kline = {
+        "timestamp": timestamp,
+        "close": float(data["close"]),
+    }
     
-    return data
+    df.loc[timestamp] = kline["close"]
+
+    if data['confirm']:
+        print("K-line closed at", timestamp)
+        while len(df)+1 < period:
+            period -= 1
+            if period < len(df)+1:
+                channel.send(f"Period has been changed to {period} because there were too few records.")
+            if period <= 2:
+                channel.send(f"There were too few records to calculate RSI")
+                break
+        if len(df) + 1 > period:
+            rsi = calculate_RSI(df, period)
+            print(f"Calculated RSI: {rsi}")
+            if rsi > 70:
+                await channel.send(f"RSI is higher than 70! Current RSI: {rsi}")
+            elif rsi < 30:
+                await channel.send(f"RSI is lower than 30! Current RSI: {rsi}")
+            else:
+                await channel.send(f"(test) Current RSI: {rsi}")
+            df = pd.DataFrame(columns = ["close"])
 
 def calculate_RSI(data, period = 14):
-    
-    columns = ["start_time", "open_price", "high_price", "low_price", "close_price", "volume", "turnover"]
-    kline_list = data["result"]["list"]
-    
-    df = pd.DataFrame(kline_list, columns=columns)
-
-    df["start_time"] = pd.to_datetime(df["start_time"], unit = "ms")
-    df["open_price"] = df["open_price"].astype(float)
-    df["high_price"] = df["high_price"].astype(float)
-    df["low_price"] = df["low_price"].astype(float)
-    df["close_price"] = df["close_price"].astype(float)
-    df["volume"] = df["volume"].astype(float)
-    df["turnover"] = df["turnover"].astype(float)
-
-    df.set_index("start_time", inplace = True)
-    df = df.sort_index(ascending = True)
-
-    RSI_df = pd.DataFrame(df["close_price"])
-    RSI = RSI_df.ta.rsi(length = period, append=True)
+    RSI = data.ta.rsi(length = period, append=True)
     print(RSI)
 
     return float(RSI[-1])
