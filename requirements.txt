@@ -1,5 +1,6 @@
-discord
-python-dotenv
-pandas
-pandas_ta
-websockets
+numpy==1.23.2
+discord==2.3.2
+python-dotenv==1.0.1
+pandas==2.2.2
+pandas-ta==0.3.14b0
+websockets==12.0

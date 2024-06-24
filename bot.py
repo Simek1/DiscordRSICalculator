@@ -6,7 +6,6 @@ import config
 from RSI_calculator import *
 
 
-
 monitoring = False
 
 bot_token = config.bot_token
