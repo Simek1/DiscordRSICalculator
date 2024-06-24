@@ -34,8 +34,10 @@ async def handle_data(msg, channel, period):
                 await channel.send(f"RSI is higher than 70! Current RSI: {rsi}")
             elif rsi < 30:
                 await channel.send(f"RSI is lower than 30! Current RSI: {rsi}")
+            ''' control print
             else:
                 await channel.send(f"(test) Current RSI: {rsi}")
+            '''
             df = pd.DataFrame(columns = ["close"])
 
 def calculate_RSI(data, period = 14):
