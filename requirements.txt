@@ -1,5 +1,5 @@
 discord
 python-dotenv
 pandas
-requests
 pandas_ta
+websockets
